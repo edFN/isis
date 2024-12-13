@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai_bla_bl
+    #    command: bash -c 'while !</dev/tcp/db/5432; do sleep 1; done; uvicorn app.main:app --host 0.0.0.0'
+    ports:
+      - 8022:8000
+    command: uvicorn main:app --host 0.0.0.0 --reload
