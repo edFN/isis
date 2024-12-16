@@ -9,6 +9,7 @@ from app.device_feature.domain import Device, WrongDeviceID
 from app.device_feature.service import DeviceService
 from app.product_feature.domain import Product, ProductCreate
 from app.product_feature.service import ProductFeatureService
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
@@ -121,6 +122,10 @@ async def detect_product(file: Annotated[bytes, File()],
 
 
 
-
-
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
