@@ -17,7 +17,7 @@ class ProductFeatureService:
     def list(self, device_id: str):
         return self.repository.get_all(device_id)
 
-    def get_recipe(self, device_id):
+    async def get_recipe(self, device_id):
         RANDOM_RECIPE = [
             """
             Бутерброды с творожным сыром и овощами. 
@@ -37,7 +37,7 @@ class ProductFeatureService:
             """
         ]
 
-        items = self.repository.get_all(device_id)
+        items = await self.repository.get_all(device_id)
 
         if len(items) >= 2:
             return choice(RANDOM_RECIPE)

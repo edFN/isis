@@ -4,6 +4,8 @@ from datetime import timedelta, datetime
 from typing import Annotated
 
 from fastapi import FastAPI, Header, Depends, File
+from fastapi.security import OAuth2PasswordBearer
+from starlette.requests import Request
 
 from app.device_feature.domain import Device, WrongDeviceID
 from app.device_feature.service import DeviceService
@@ -12,9 +14,11 @@ from app.product_feature.service import ProductFeatureService
 
 app = FastAPI()
 
+
+
 @app.post('/register-device')
 async def register_device_id(device_id: str,
-                       device_service = Depends(DeviceService) ):
+                             device_service = Depends(DeviceService) ):
     """Регистрация холодильника в системе"""
     try:
         device = await device_service.register_device(device_id)
@@ -23,18 +27,44 @@ async def register_device_id(device_id: str,
         print(e)
         return {"success": False}
 
+@app.post('/login')
+async def login(request: Request,
+                device_id: str, private_key: str, device_service: DeviceService = Depends(DeviceService)):
+    try:
+        access_token, refresh_token = await device_service.authenticate_device(device_id, private_key,
+                                                                               request.client.host)
+
+        return {"access_token": access_token, "refresh_token": refresh_token}
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+@app.post('/refresh')
+async def refresh_token(request: Request,
+                        refresh_token: str,
+                        device_service: DeviceService = Depends(DeviceService)):
+    try:
+        access_token, refresh_token = await device_service.rotate_token(refresh_token, request.client.host)
+
+        return {"access_token": access_token, "refresh_token": refresh_token}
+    except Exception as e:
+        print(e)
+        return {"success": False}
+
+
 
 
 @app.post('/insert-product')
-async def insert_product(product: ProductCreate,
-                          x_private_key: str = Header(...),
+async def insert_product( request: Request,
+                          product: ProductCreate,
+                          x_token = Header(...),
                           device_service: DeviceService = Depends(DeviceService),
                           product_service: ProductFeatureService = Depends(ProductFeatureService)):
 
     """Вставка продукта в бд"""
 
     try:
-        device = await device_service.get_by_private_key(x_private_key)
+        device = await device_service.get_device_by_access_token(x_token, request.client.host)
 
         product = Product(**product.model_dump(), device_id=device.device_id)
 
@@ -47,8 +77,11 @@ async def insert_product(product: ProductCreate,
         return {"success": False}
 
 
+
+
 @app.get('/get-products')
-async def get_products(x_private_key: str = Header(...),
+async def get_products(request: Request,
+                       x_token = Header(...),
                        device_service: DeviceService = Depends(DeviceService),
                        product_service: ProductFeatureService = Depends(ProductFeatureService)
                        ):
@@ -56,7 +89,7 @@ async def get_products(x_private_key: str = Header(...),
     """Получить все продукты в холодильнике"""
 
     try:
-        device = await device_service.get_by_private_key(x_private_key)
+        device = await device_service.get_device_by_access_token(x_token, request.client.host)
 
         products = await product_service.list(device.device_id)
 
@@ -68,13 +101,14 @@ async def get_products(x_private_key: str = Header(...),
 
 
 @app.get('/get-random-recipe')
-async def get_recipe(x_private_key: str = Header(...),
+async def get_recipe(request: Request,
+                     x_token = Header(...),
                      device_service: DeviceService = Depends(DeviceService),
                      product_service: ProductFeatureService = Depends(ProductFeatureService)
                      ):
     """Получить рандомный рецепт"""
     try:
-        device = await device_service.get_by_private_key(x_private_key)
+        device = await device_service.get_device_by_access_token(x_token, request.client.host)
 
         products = await product_service.get_recipe(device.device_id)
 
@@ -86,8 +120,8 @@ async def get_recipe(x_private_key: str = Header(...),
 
 
 @app.post('/detect-product')
-async def detect_product(file: Annotated[bytes, File()],
-                   x_private_key: str = Header(...),
+async def detect_product(request: Request,file: Annotated[bytes, File()],
+                   x_token = Header(...),
                    device_service: DeviceService = Depends(DeviceService),
                    product_service: ProductFeatureService = Depends(ProductFeatureService)
                    ):
@@ -102,7 +136,7 @@ async def detect_product(file: Annotated[bytes, File()],
 
         names = ['Молоко', 'Сыр', 'Мясо']
 
-        device = await device_service.get_by_private_key(x_private_key)
+        device = await device_service.get_device_by_access_token(x_token, request.client.host)
 
         product = Product(
             device_id=device.device_id,
