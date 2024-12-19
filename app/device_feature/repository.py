@@ -1,6 +1,7 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
-from app.device_feature.domain import Device
+from app.device_feature.domain import Device, DeviceTokenRefresh
+
 
 class IDeviceRepository:
     @abstractmethod
@@ -15,6 +16,17 @@ class IDeviceRepository:
     async def find_by_key(self, private_key: str):
         raise NotImplementedError
 
+class RefreshTokenRepository:
+    def save(self, refresh_device: DeviceTokenRefresh):
+        pass
+
+    def find_by_key(self, refresh_token: str):
+        pass
+
+    def delete_token(self, refresh_token: str):
+        pass
+
+
 
 
 DEVICE_FAKE_DB = {
@@ -26,6 +38,9 @@ DEVICE_FAKE_DB = {
                             is_active=True)
 }
 
+REFRESH_FAKE_DB = {
+
+}
 
 class InMemoryDeviceRepository(IDeviceRepository):
 
@@ -50,7 +65,26 @@ class InMemoryDeviceRepository(IDeviceRepository):
 
         raise Exception("Ничего не найдено")
 
+class InMemoryRefreshRepository(RefreshTokenRepository):
+    def save(self, refresh_device: DeviceTokenRefresh):
+        REFRESH_FAKE_DB[refresh_device.refresh_token] = refresh_device
+        return refresh_device
 
+    def find_by_key(self, refresh_token):
+
+        if refresh_token in REFRESH_FAKE_DB:
+            return REFRESH_FAKE_DB[refresh_token]
+        else:
+            raise ValueError
+
+    def delete_token(self, refresh_token: str):
+        if refresh_token in REFRESH_FAKE_DB:
+            del REFRESH_FAKE_DB[refresh_token]
+
+
+
+def get_refresh_repository():
+    return InMemoryRefreshRepository()
 
 def get_device_repository():
     return InMemoryDeviceRepository()

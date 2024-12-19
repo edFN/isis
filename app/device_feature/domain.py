@@ -12,6 +12,13 @@ class WrongDeviceID(Exception):
         return f'Идентификартор {self.device_id} не является продукцией нашей фирмы!'
 
 
+
+
+
+class AccessTokenPayload(BaseModel):
+    device_id: str
+    ip_address: str
+
 class Device(BaseModel):
     device_id: str
     is_blocked: bool = False
@@ -25,3 +32,9 @@ class Device(BaseModel):
 
     def validate_key(self, key):
         return key == self.private_key
+
+
+class DeviceTokenRefresh(BaseModel):
+    device_id: str = None
+    ip_address: str
+    refresh_token: str
