@@ -1,4 +1,3 @@
-# vereten_wnimanie_zdes_piton_otdela_ii
 
 
 
